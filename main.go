@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"golang.org/x/net/html"
 )
@@ -28,17 +29,20 @@ func main() {
 		}
 		programs := fetchPrograms(doc)
 		for _, program := range programs {
-			fmt.Printf("%+v\n", program)
+			fmt.Printf("Program: %s\n", program.Title)
+			fmt.Printf("Info Link: %s%s\n", sfballetRoot, program.InfoPath)
+			if len(program.PerformanceList) > 0 {
+				fmt.Printf("Performance List: %s\n", strings.Join(program.PerformanceList, ", "))
+			}
+			if program.Dates == "" {
+				fmt.Println("Dates: This program is no longer available.")
+				fmt.Println("Buy Tickets Link: This program is no longer available.")
+			} else {
+				fmt.Printf("Dates: %s\n", program.Dates)
+				fmt.Printf("Buy Tickets Link: %s%s\n", sfballetRoot, program.TicketPath)
+			}
 		}
 	}
-}
-
-type Program struct {
-	InfoPath string
-	Title string
-	PerformanceList []string
-	Dates string
-	TicketPath string
 }
 
 func fetch(node *html.Node, matcher Matcher) *html.Node {
