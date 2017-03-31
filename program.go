@@ -1,16 +1,50 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"strings"
+
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
 
 type Program struct {
-	InfoPath string
-	Title string
+	InfoURL         string
+	Title           string
 	PerformanceList []string
-	Dates string
-	TicketPath string
+	Available       bool
+	Dates           string
+	TicketURL       string
+}
+
+func (p *Program) String() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("Program: %s\n", p.Title))
+	if !p.Available {
+		buffer.WriteString("Note: This program is no longer available.")
+	}
+	buffer.WriteString(fmt.Sprintf("Info Link: %s\n", p.InfoURL))
+	if len(p.PerformanceList) > 0 {
+		buffer.WriteString(fmt.Sprintf("Performance List: %s\n", strings.Join(p.PerformanceList, ", ")))
+	}
+	if p.Available {
+		buffer.WriteString(fmt.Sprintf("Dates: %s\n", p.Dates))
+		buffer.WriteString(fmt.Sprintf("Buy Tickets Link: %s\n", p.TicketURL))
+	}
+	return buffer.String()
+}
+
+func fetchPrograms(node *html.Node) []*Program {
+	pMatcher := func(node *html.Node) bool {
+		return node.DataAtom == atom.Div && extractValue(node, "class") == "program-item"
+	}
+	matches := fetchAll(node, pMatcher)
+	programs := make([]*Program, len(matches))
+	for idx, match := range matches {
+		programs[idx] = nodeToProgram(match)
+	}
+	return programs
 }
 
 func nodeToProgram(node *html.Node) *Program {
@@ -22,7 +56,7 @@ func nodeToProgram(node *html.Node) *Program {
 				titleNode := fetch(child, func(node *html.Node) bool {
 					return node.DataAtom == atom.Div && extractValue(node, "class") == "large_sub_title"
 				})
-				program.InfoPath = extractValue(child, "href")
+				program.InfoURL = fmt.Sprintf("%s%s", sfballetRoot, extractValue(child, "href"))
 				program.Title = fetchText(titleNode)
 			}
 		case atom.Ul:
@@ -30,17 +64,18 @@ func nodeToProgram(node *html.Node) *Program {
 				items := fetchAll(child, byDataAtom(atom.Li))
 				program.PerformanceList = make([]string, len(items))
 				for idx, item := range items {
-					program.PerformanceList[idx] = fetchText(item)
+					program.PerformanceList[idx] = strings.TrimSpace(fetchText(item))
 				}
 			}
 		case atom.P:
 			if extractValue(child, "class") == "performance-date" {
+				program.Available = true
 				program.Dates = fetchText(child)
 			}
 		case atom.Div:
 			paths := fetchTicketPaths(child)
 			if len(paths) > 0 {
-				program.TicketPath = paths[0]
+				program.TicketURL = fmt.Sprintf("%s%s", sfballetRoot, paths[0])
 			}
 		}
 	}
