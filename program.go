@@ -15,6 +15,7 @@ type Program struct {
 	PerformanceList []string
 	Available       bool
 	Dates           string
+	ShowDates       []*Date
 	TicketURL       string
 }
 
@@ -22,7 +23,7 @@ func (p *Program) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("Program: %s\n", p.Title))
 	if !p.Available {
-		buffer.WriteString("Note: This program is no longer available.")
+		buffer.WriteString("Note: This program is no longer available.\n")
 	}
 	buffer.WriteString(fmt.Sprintf("Info Link: %s\n", p.InfoURL))
 	if len(p.PerformanceList) > 0 {
